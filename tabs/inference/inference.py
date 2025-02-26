@@ -54,7 +54,7 @@ sup_audioext = {
 
 names = [
     os.path.join(root, file)
-    for root, _, files in os.walk(model_root_relative, topdown=False)
+    for root, _, files in os.walk(model_root_relative, topdown=False, followlinks=True)
     for file in files
     if (
         file.endswith((".pth", ".onnx"))
@@ -66,14 +66,14 @@ default_weight = names[0] if names else None
 
 indexes_list = [
     os.path.join(root, name)
-    for root, _, files in os.walk(model_root_relative, topdown=False)
+    for root, _, files in os.walk(model_root_relative, topdown=False, followlinks=True)
     for name in files
     if name.endswith(".index") and "trained" not in name
 ]
 
 audio_paths = [
     os.path.join(root, name)
-    for root, _, files in os.walk(audio_root_relative, topdown=False)
+    for root, _, files in os.walk(audio_root_relative, topdown=False, followlinks=True)
     for name in files
     if name.endswith(tuple(sup_audioext))
     and root == audio_root_relative
@@ -82,7 +82,7 @@ audio_paths = [
 
 custom_embedders = [
     os.path.join(dirpath, dirname)
-    for dirpath, dirnames, _ in os.walk(custom_embedder_root_relative)
+    for dirpath, dirnames, _ in os.walk(custom_embedder_root_relative, followlinks=True)
     for dirname in dirnames
 ]
 
@@ -177,7 +177,7 @@ def change_choices(model):
         speakers = [0]
     names = [
         os.path.join(root, file)
-        for root, _, files in os.walk(model_root_relative, topdown=False)
+        for root, _, files in os.walk(model_root_relative, topdown=False, followlinks=True)
         for file in files
         if (
             file.endswith((".pth", ".onnx"))
@@ -187,14 +187,14 @@ def change_choices(model):
 
     indexes_list = [
         os.path.join(root, name)
-        for root, _, files in os.walk(model_root_relative, topdown=False)
+        for root, _, files in os.walk(model_root_relative, topdown=False, followlinks=True)
         for name in files
         if name.endswith(".index") and "trained" not in name
     ]
 
     audio_paths = [
         os.path.join(root, name)
-        for root, _, files in os.walk(audio_root_relative, topdown=False)
+        for root, _, files in os.walk(audio_root_relative, topdown=False, followlinks=True)
         for name in files
         if name.endswith(tuple(sup_audioext))
         and root == audio_root_relative
@@ -227,7 +227,7 @@ def change_choices(model):
 def get_indexes():
     indexes_list = [
         os.path.join(dirpath, filename)
-        for dirpath, _, filenames in os.walk(model_root_relative)
+        for dirpath, _, filenames in os.walk(model_root_relative, topdown=False, followlinks=True)
         for filename in filenames
         if filename.endswith(".index") and "trained" not in filename
     ]
@@ -326,7 +326,7 @@ def refresh_formant():
 def refresh_embedders_folders():
     custom_embedders = [
         os.path.join(dirpath, dirname)
-        for dirpath, dirnames, _ in os.walk(custom_embedder_root_relative)
+        for dirpath, dirnames, _ in os.walk(custom_embedder_root_relative, followlinks=True)
         for dirname in dirnames
     ]
     return custom_embedders
