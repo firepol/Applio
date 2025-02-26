@@ -2,6 +2,12 @@ import numpy as np
 import librosa
 
 
+def format_time(seconds):
+    """Convert seconds to mm:ss format"""
+    minutes = int(seconds // 60)
+    seconds = int(seconds % 60)
+    return f"{minutes:02d}:{seconds:02d}"
+
 def process_audio(audio, sr=16000, silence_thresh=-35, min_silence_len=500, min_chunk_len=300000):
     """
     Splits an audio signal into segments at silence points.
@@ -55,6 +61,7 @@ def process_audio(audio, sr=16000, silence_thresh=-35, min_silence_len=500, min_
     audio_segments = [audio[start:end] for start, end in merged_intervals]
     
     print(f"Split points found at (seconds): {[i/sr for i in merged_intervals.flatten()]}")
+    print(f"Split points in mm:ss format: {[format_time(i/sr) for i in merged_intervals.flatten()]}")
     print(f"Chunk durations (minutes): {[(end-start)/(sr*60) for start, end in merged_intervals]}")
     
     return audio_segments, merged_intervals

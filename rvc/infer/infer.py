@@ -279,11 +279,22 @@ class VoiceConverter:
             if self.tgt_sr != resample_sr >= 16000:
                 self.tgt_sr = resample_sr
 
+            def format_time(seconds):
+                """Convert seconds to mm:ss format"""
+                minutes = int(seconds // 60)
+                seconds = int(seconds % 60)
+                return f"{minutes:02d}:{seconds:02d}"
+            
             if split_audio:
                 chunks, intervals = process_audio(audio, 16000)
                 print(f"Audio split into {len(chunks)} chunks for processing.")
                 audio_opt = None
                 for i, c in enumerate(chunks):
+                    start_time = intervals[i][0] / 16000
+                    end_time = intervals[i][1] / 16000
+                    duration = end_time - start_time
+                    print(f"Processing chunk {i+1}/{len(chunks)} from {format_time(start_time)} to {format_time(end_time)} (duration: {format_time(duration)})")
+                    
                     # Process chunk
                     converted_chunk = self.vc.pipeline(
                         model=self.hubert_model,
@@ -313,7 +324,7 @@ class VoiceConverter:
                     # Save chunk to temporary file
                     temp_chunk_path = f"temp_chunk_{i}.wav"
                     sf.write(temp_chunk_path, converted_chunk, self.tgt_sr)
-                    print(f"Processed and saved chunk {i+1}/{len(chunks)}")
+                    print(f"Processed and saved chunk {i+1}/{len(chunks)} from {format_time(start_time)} to {format_time(end_time)} (duration: {format_time(duration)})")
                     
                     del converted_chunk  # Free memory
                 
