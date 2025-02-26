@@ -445,6 +445,38 @@ def inference_tab():
                     value=False,
                     interactive=True,
                 )
+                silence_thresh = gr.Slider(
+                    minimum=-60,
+                    maximum=-20,
+                    label=i18n("Silence Threshold (dB)"),
+                    info=i18n(
+                        "Set the silence threshold in dB. Lower values mean more aggressive silence detection."
+                    ),
+                    visible=False,
+                    value=-35,
+                    interactive=True,
+                )
+                min_silence_len = gr.Slider(
+                    minimum=100,
+                    maximum=10000,
+                    label=i18n("Minimum Silence Duration (ms)"),
+                    info=i18n(
+                        "Set the minimum silence duration in milliseconds. Higher values mean longer silences are needed for splitting."
+                    ),
+                    visible=False,
+                    value=500,
+                    interactive=True,
+                )
+                
+                # Make silence parameters visible when split_audio is checked
+                split_audio.change(
+                    fn=lambda x: (
+                        gr.update(visible=x),
+                        gr.update(visible=x),
+                    ),
+                    inputs=[split_audio],
+                    outputs=[silence_thresh, min_silence_len],
+                )
                 autotune = gr.Checkbox(
                     label=i18n("Autotune"),
                     info=i18n(
@@ -1075,6 +1107,28 @@ def inference_tab():
                     value=False,
                     interactive=True,
                 )
+                silence_thresh_batch = gr.Slider(
+                    minimum=-60,
+                    maximum=-20,
+                    label=i18n("Silence Threshold (dB)"),
+                    info=i18n(
+                        "Set the silence threshold in dB. Lower values mean more aggressive silence detection."
+                    ),
+                    visible=False,
+                    value=-35,
+                    interactive=True,
+                )
+                min_silence_len_batch = gr.Slider(
+                    minimum=100,
+                    maximum=10000,
+                    label=i18n("Minimum Silence Duration (ms)"),
+                    info=i18n(
+                        "Set the minimum silence duration in milliseconds. Higher values mean longer silences are needed for splitting."
+                    ),
+                    visible=False,
+                    value=500,
+                    interactive=True,
+                )
                 autotune_batch = gr.Checkbox(
                     label=i18n("Autotune"),
                     info=i18n(
@@ -1543,10 +1597,10 @@ def inference_tab():
                     export_presets_button,
                     inputs=[
                         preset_name_input,
-                        pitch,
-                        index_rate,
-                        rms_mix_rate,
-                        protect,
+                        pitch_batch,
+                        index_rate_batch,
+                        rms_mix_rate_batch,
+                        protect_batch,
                     ],
                     outputs=[],
                 )

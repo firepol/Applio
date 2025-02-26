@@ -206,6 +206,8 @@ class VoiceConverter:
         protect: float = 0.5,
         hop_length: int = 128,
         split_audio: bool = False,
+        silence_thresh: int = -35,
+        min_silence_len: int = 500,
         f0_autotune: bool = False,
         f0_autotune_strength: float = 1,
         embedder_model: str = "contentvec",
@@ -281,7 +283,12 @@ class VoiceConverter:
                 self.tgt_sr = resample_sr
 
             if split_audio:
-                chunks, intervals = process_audio(audio, 16000)
+                chunks, intervals = process_audio(
+                    audio, 
+                    16000, 
+                    silence_thresh=silence_thresh,
+                    min_silence_len=min_silence_len
+                )
                 print(f"Audio split into {len(chunks)} chunks for processing.")
                 audio_opt = None
                 for i, c in enumerate(chunks):
