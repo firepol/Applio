@@ -22,6 +22,7 @@ from pedalboard import (
     Compressor,
     Delay,
 )
+import glob
 
 now_dir = os.getcwd()
 sys.path.append(now_dir)
@@ -281,17 +282,54 @@ class VoiceConverter:
             if split_audio:
                 chunks, intervals = process_audio(audio, 16000)
                 print(f"Audio split into {len(chunks)} chunks for processing.")
+                audio_opt = None
+                for i, c in enumerate(chunks):
+                    # Process chunk
+                    converted_chunk = self.vc.pipeline(
+                        model=self.hubert_model,
+                        net_g=self.net_g,
+                        sid=sid,
+                        audio=c,
+                        pitch=pitch,
+                        f0_method=f0_method,
+                        file_index=file_index,
+                        index_rate=index_rate,
+                        pitch_guidance=self.use_f0,
+                        volume_envelope=volume_envelope,
+                        version=self.version,
+                        protect=protect,
+                        hop_length=hop_length,
+                        f0_autotune=f0_autotune,
+                        f0_autotune_strength=f0_autotune_strength,
+                        f0_file=f0_file,
+                    )
+                    
+                    # Clean chunk if needed
+                    if clean_audio:
+                        converted_chunk = self.remove_audio_noise(
+                            converted_chunk, self.tgt_sr, clean_strength
+                        )
+                    
+                    # Save chunk to temporary file
+                    temp_chunk_path = f"temp_chunk_{i}.wav"
+                    sf.write(temp_chunk_path, converted_chunk, self.tgt_sr)
+                    print(f"Processed and saved chunk {i+1}/{len(chunks)}")
+                    
+                    del converted_chunk  # Free memory
+                
+                # Merge chunks from temp files
+                audio_opt = self.merge_chunks_from_files(intervals, 16000, self.tgt_sr)
+                
+                # Clean up temp files
+                for temp_file in glob.glob("temp_chunk_*.wav"):
+                    os.remove(temp_file)
             else:
-                chunks = []
-                chunks.append(audio)
-
-            converted_chunks = []
-            for c in chunks:
+                chunks = [audio]
                 audio_opt = self.vc.pipeline(
                     model=self.hubert_model,
                     net_g=self.net_g,
                     sid=sid,
-                    audio=c,
+                    audio=chunks[0],
                     pitch=pitch,
                     f0_method=f0_method,
                     file_index=file_index,
@@ -305,23 +343,6 @@ class VoiceConverter:
                     f0_autotune_strength=f0_autotune_strength,
                     f0_file=f0_file,
                 )
-                converted_chunks.append(audio_opt)
-                if split_audio:
-                    print(f"Converted audio chunk {len(converted_chunks)}")
-
-            if split_audio:
-                audio_opt = merge_audio(
-                    chunks, converted_chunks, intervals, 16000, self.tgt_sr
-                )
-            else:
-                audio_opt = converted_chunks[0]
-
-            if clean_audio:
-                cleaned_audio = self.remove_audio_noise(
-                    audio_opt, self.tgt_sr, clean_strength
-                )
-                if cleaned_audio is not None:
-                    audio_opt = cleaned_audio
 
             if post_process:
                 audio_opt = self.post_process_audio(
@@ -490,3 +511,23 @@ class VoiceConverter:
         if self.cpt is not None:
             self.vc = VC(self.tgt_sr, self.config)
             self.n_spk = self.cpt["config"][-3]
+
+    def merge_chunks_from_files(self, intervals, sr_orig, sr_target):
+        """
+        Merges audio chunks from temporary files.
+
+        Args:
+            intervals (np.ndarray): Array of start/end intervals for each chunk
+            sr_orig (int): Original sampling rate
+            sr_target (int): Target sampling rate
+
+        Returns:
+            np.ndarray: Merged audio data
+        """
+        result = None
+        for i, (start_idx, end_idx) in enumerate(intervals):
+            chunk = sf.read(f"temp_chunk_{i}.wav")[0]
+            if result is None:
+                result = np.zeros(int(end_idx * sr_target / sr_orig))
+            result[int(start_idx * sr_target / sr_orig):int(end_idx * sr_target / sr_orig)] = chunk
+        return result
