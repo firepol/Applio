@@ -526,8 +526,28 @@ class VoiceConverter:
         """
         result = None
         for i, (start_idx, end_idx) in enumerate(intervals):
-            chunk = sf.read(f"temp_chunk_{i}.wav")[0]
+            chunk, _ = sf.read(f"temp_chunk_{i}.wav")
+            chunk_len = len(chunk)
+            
+            # Calculate target positions
+            start_pos = int(start_idx * sr_target / sr_orig)
+            end_pos = int(end_idx * sr_target / sr_orig)
+            target_len = end_pos - start_pos
+            
             if result is None:
-                result = np.zeros(int(end_idx * sr_target / sr_orig))
-            result[int(start_idx * sr_target / sr_orig):int(end_idx * sr_target / sr_orig)] = chunk
+                # Initialize result array based on last interval end position
+                final_end = int(intervals[-1][1] * sr_target / sr_orig)
+                result = np.zeros(final_end)
+            
+            # Handle size mismatch
+            if chunk_len > target_len:
+                # Trim chunk if it's too long
+                chunk = chunk[:target_len]
+            elif chunk_len < target_len:
+                # Pad chunk if it's too short
+                chunk = np.pad(chunk, (0, target_len - chunk_len), 'constant')
+            
+            # Place chunk in result array
+            result[start_pos:end_pos] = chunk
+        
         return result

@@ -2,16 +2,16 @@ import numpy as np
 import librosa
 
 
-def process_audio(audio, sr=16000, silence_thresh=-35, min_silence_len=500, min_chunk_len=5 * 60 * 1000):
+def process_audio(audio, sr=16000, silence_thresh=-35, min_silence_len=500, min_chunk_len=300000):
     """
     Splits an audio signal into segments at silence points.
 
     Parameters:
     - audio (np.ndarray): The audio signal to split.
     - sr (int): The sample rate of the input audio (default is 16000).
-    - silence_thresh (int): Silence threshold in dB (default -35dB, less aggressive than -60dB)
+    - silence_thresh (int): Silence threshold in dB (default -35dB)
     - min_silence_len (int): Minimum silence duration in ms (default 500ms)
-    - min_chunk_len (int): Minimum chunk duration in ms (default 5 minutes (in milliseconds))
+    - min_chunk_len (int): Minimum chunk duration in ms (default 300000ms = 5 minutes)
 
     Returns:
     - list of np.ndarray: A list of audio segments.
@@ -30,23 +30,24 @@ def process_audio(audio, sr=16000, silence_thresh=-35, min_silence_len=500, min_
         hop_length=hop_length
     )
 
-    # Merge intervals that are too close or result in chunks that are too short
+    # Merge intervals that are too close or split if too long
     merged_intervals = []
     current_start = intervals[0][0]
     current_end = intervals[0][1]
 
     for start, end in intervals[1:]:
         gap_duration = start - current_end
-        chunk_duration = end - current_end
+        chunk_duration = end - current_start
 
-        # If the gap is small or the resulting chunk would be too short, merge
-        if gap_duration < min_chunk_samples or chunk_duration < min_chunk_samples:
-            current_end = end
-        else:
+        # If we've accumulated more than min_chunk_samples and found a silence, split
+        if chunk_duration >= min_chunk_samples and gap_duration >= frame_length:
             merged_intervals.append([current_start, current_end])
             current_start = start
             current_end = end
+        else:
+            current_end = end
 
+    # Add the final chunk
     merged_intervals.append([current_start, current_end])
     merged_intervals = np.array(merged_intervals)
 
@@ -54,6 +55,7 @@ def process_audio(audio, sr=16000, silence_thresh=-35, min_silence_len=500, min_
     audio_segments = [audio[start:end] for start, end in merged_intervals]
     
     print(f"Split points found at (seconds): {[i/sr for i in merged_intervals.flatten()]}")
+    print(f"Chunk durations (minutes): {[(end-start)/(sr*60) for start, end in merged_intervals]}")
     
     return audio_segments, merged_intervals
 
