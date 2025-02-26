@@ -32,6 +32,7 @@ from rvc.lib.utils import load_audio_infer, load_embedding
 from rvc.lib.tools.split_audio import process_audio, merge_audio
 from rvc.lib.algorithm.synthesizers import Synthesizer
 from rvc.configs.config import Config
+from rvc.lib.tools.time_utils import format_time
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -279,21 +280,14 @@ class VoiceConverter:
             if self.tgt_sr != resample_sr >= 16000:
                 self.tgt_sr = resample_sr
 
-            def format_time(seconds):
-                """Convert seconds to mm:ss format"""
-                minutes = int(seconds // 60)
-                seconds = int(seconds % 60)
-                return f"{minutes:02d}:{seconds:02d}"
-            
             if split_audio:
                 chunks, intervals = process_audio(audio, 16000)
                 print(f"Audio split into {len(chunks)} chunks for processing.")
                 audio_opt = None
                 for i, c in enumerate(chunks):
-                    start_time = intervals[i][0] / 16000
-                    end_time = intervals[i][1] / 16000
-                    duration = end_time - start_time
-                    print(f"Processing chunk {i+1}/{len(chunks)} from {format_time(start_time)} to {format_time(end_time)} (duration: {format_time(duration)})")
+                    start_time_chunk = intervals[i][0] / 16000
+                    end_time_chunk = intervals[i][1] / 16000
+                    duration = end_time_chunk - start_time_chunk
                     
                     # Process chunk
                     converted_chunk = self.vc.pipeline(
@@ -321,10 +315,10 @@ class VoiceConverter:
                             converted_chunk, self.tgt_sr, clean_strength
                         )
                     
-                    # Save chunk to temporary file
+                    # Save chunk
                     temp_chunk_path = f"temp_chunk_{i}.wav"
                     sf.write(temp_chunk_path, converted_chunk, self.tgt_sr)
-                    print(f"Processed and saved chunk {i+1}/{len(chunks)} from {format_time(start_time)} to {format_time(end_time)} (duration: {format_time(duration)})")
+                    print(f"Processed and saved chunk {i+1}/{len(chunks)} from {format_time(start_time_chunk)} to {format_time(end_time_chunk)} (duration: {format_time(duration)})")
                     
                     del converted_chunk  # Free memory
                 
@@ -371,9 +365,7 @@ class VoiceConverter:
             )
 
             elapsed_time = time.time() - start_time
-            print(
-                f"Conversion completed at '{audio_output_path}' in {elapsed_time:.2f} seconds."
-            )
+            print(f"Conversion completed at '{audio_output_path}' in {format_time(elapsed_time)}.")
         except Exception as error:
             print(f"An error occurred during audio conversion: {error}")
             print(traceback.format_exc())
@@ -437,7 +429,7 @@ class VoiceConverter:
                 )
             print(f"Conversion completed at '{audio_input_paths}'.")
             elapsed_time = time.time() - start_time
-            print(f"Batch conversion completed in {elapsed_time:.2f} seconds.")
+            print(f"Batch conversion completed in {format_time(elapsed_time)}.")
         except Exception as error:
             print(f"An error occurred during audio batch conversion: {error}")
             print(traceback.format_exc())
